@@ -4,8 +4,8 @@
 
 * The IDE is cloud 9.
 
-* Hong Zhuang implements the server program.
-* Ying Wang implements the client program and makefile, and conducted testing.
+* Hong Zhuang implements the server program, readline() function.
+* Ying Wang implements the client program, writen() function, makefile, and conducted testing.
 
 * How to run:
 Run make to generate executable files for the project, client and server. Run make clean to remove all the 
