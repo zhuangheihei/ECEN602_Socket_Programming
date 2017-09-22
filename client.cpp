@@ -112,12 +112,13 @@ int main(){
     cout << "Server connected!" << endl;
         
     //input
-    cout<<"Input a String (or Control+D to stop the connection)! "<< endl;
+    cout<<"Input a String (or Control+D twice to stop the connection)! "<< endl;
     cout << "The maximum length is " << str_size - 1 << endl;
     
     while(fgets(bufSend, sizeof(bufSend), stdin)){
+        //If user want to terminate the client after type in message, press ctrl + D twice.
         if(feof(stdin)){
-            cout << '\n' << "EOF detected, the client will shut off and not send message." << endl;
+            cout << '\n' << "EOF detected, the client will be terminated and not send message." << endl;
             break;
         }
         bufSend[str_size] = '\0';
