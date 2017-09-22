@@ -1,4 +1,4 @@
-### This project conatains a TCP Echo Server and Client
+### This project contains a TCP Echo Server and Client
  
 * This project is written in C/C++.
 
