@@ -5,7 +5,8 @@
 #include <sys/un.h>
 #include <sstream>
 #include <stdlib.h>
-
+#include <stdio_ext.h>
+void  __fpurge(FILE *stream);
 //network header
 #include <sys/socket.h>
 #include <netdb.h>
@@ -37,42 +38,51 @@ int writen(int socket_fd, char* buf, int N){
     return N;
 }
 
-//readline function
-int readline(int socket, char* pRead)
-{
-    char c = '0';
-    int status = 0;
-    int i = 0;
-
-    while(true)
-    {
-        status = read(socket, &c, 1);
-
-        if(status < 0){
-            if(errno == EINTR){
+//readline 
+int readline(int socket, char* buf, int n){
+    char str[str_size + 1];
+    int len;
+    int bytesRead;
+    char *b;
+    char c;
+    
+    if (n <= 0 || buf == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    b = buf;
+    len = 0;
+    
+    while(true){
+        bytesRead = (int)read(socket, &c, 1);
+        if(bytesRead == -1){
+            if(errno == EINTR){ //EINTR, do it again.
                 continue;
-            }
-                //socket error
+            }else {
                 return -1;
-        }
-        else if(status == 0)
-        {
-            //EOF and return;
-            return -1;
-        }
-        else if(status > 0)
-        {
-            pRead[i] = c;
-
-            i++;
-
-            if(c == '\n' || c == '\r\n')
-            {
-                break;
             }
+            //Check for EOF
+        }else if(bytesRead == 0){
+            if (len == 0)           // No bytes read, return 0 
+                return 0;
+            else                    //Some bytes read, end with '\0'
+                break;
+
+        } else {                    // bytesRead must be 1  
+            if (len < n - 1) {      // Discard > (n - 1) bytes 
+                len++;
+                *b = c;
+                b++;
+            }
+            if(c==EOF) return -1;
+            if (c == '\n')
+                break;
         }
     }
-    return i;
+
+    *b = '\0';
+    return len;
 }
 
 
@@ -86,66 +96,71 @@ int main(){
     char bufSend[str_size+1];
     char bufRecv[str_size+1];
     
-        //create a socket
-        int network_socket=socket(AF_INET,SOCK_STREAM,0);
-        
-        //call connect
-        int connection_status=connect(network_socket,(struct sockaddr*)&server_address,sizeof(server_address));
-        if(connection_status<0){
-            cout<<"There is an error when connecting to server!"<<endl;
-            cout << "Error number " << (int) errno << endl;
-            exit(0);
-        }
-        cout << "Server connected!" << endl;
-        
-        //input
-        cout<<"Input a String (or Control+D to stop the connection)! "<<endl;
+    memset(bufSend,0,sizeof(bufSend));
+    memset(bufRecv,0,sizeof(bufRecv));
     
-    while(fgets(bufSend, sizeof(bufSend) + 1, stdin)){
+    //create a socket
+    int network_socket=socket(AF_INET,SOCK_STREAM,0);
         
-        // call send() to send data to server;
-        // int send_success=send(network_socket, bufSend, sizeof(bufSend), 0);
+    //call connect
+    int connection_status=connect(network_socket,(struct sockaddr*)&server_address,sizeof(server_address));
+    if(connection_status<0){
+        cout<<"There is an error when connecting to server!"<<endl;
+        cout << "Error number " << (int) errno << endl;
+        exit(0);
+    }
+    cout << "Server connected!" << endl;
+        
+    //input
+    cout<<"Input a String (or Control+D to stop the connection)! "<< endl;
+    cout << "The maximum length is " << str_size - 1 << endl;
+    
+    while(fgets(bufSend, sizeof(bufSend), stdin)){
+        if(feof(stdin)){
+            cout << '\n' << "EOF detected, the client will shut off and not send message." << endl;
+            break;
+        }
         bufSend[str_size] = '\0';
-        if(strlen(bufSend) == sizeof(bufSend)-1 && bufSend[str_size-1] != '\n') {
-            printf("Input size exceed the maximum acceptable size, will quit. \n");
-            break;
+        if(strlen(bufSend) == sizeof(bufSend) -1 && bufSend[str_size-1] != '\n') {
+            cout << "Error: Input size exceed the maximum capacity." << endl;
+            cout << "Please type again. The maximum length is " << str_size - 1 << endl;
+            //Clear the stdin buffer
+            __fpurge(stdin);
+            continue;
+        }else{
+        
+            int write_success=writen(network_socket,bufSend,sizeof(bufSend));
+            
+            if(write_success<0){
+                cout<<"No sending now!"<<endl;
+                break;
+            }
+            
+            readline(network_socket, bufRecv,str_size);
+            cout<<"Echoed message from server: " << bufRecv <<endl;
+            
+            //reset buffers
+            memset(bufSend,0,sizeof(bufSend));
+            memset(bufRecv,0,sizeof(bufRecv));
+            
+            //close socket
+            close(network_socket);
+            
+            //create a socket
+            int network_socket=socket(AF_INET,SOCK_STREAM,0);
+            
+            //call connect
+            int connection_status=connect(network_socket,(struct sockaddr*)&server_address,sizeof(server_address));
+            if(connection_status<0){
+                cout<<"There is an error when connecting to server!"<<endl;
+                cout << "Error number " << (int) errno << endl;
+                exit(0);
+            }
+            //cout << "Server connected!" << endl;
+            
+            //input
+            cout<<"Input a String (or Control+D to shut off the connection)! "<<endl;
         }
-        
-        int write_success=writen(network_socket,bufSend,sizeof(bufSend));
-        
-        if(write_success<0){
-            cout<<"No sending now!"<<endl;
-            break;
-        }
-        //call read to receive data from server
-    
-        //read(network_socket, bufRecv, sizeof(bufRecv));
-        
-        readline(network_socket, bufRecv);
-        cout<<"Echoed message from server: " << bufRecv <<endl;
-        
-        //reset buffers
-        memset(bufSend,0,sizeof(bufSend));
-        memset(bufRecv,0,sizeof(bufRecv));
-        
-        //close socket
-        close(network_socket);
-        
-        //create a socket
-        int network_socket=socket(AF_INET,SOCK_STREAM,0);
-        
-        //call connect
-        int connection_status=connect(network_socket,(struct sockaddr*)&server_address,sizeof(server_address));
-        if(connection_status<0){
-            cout<<"There is an error when connecting to server!"<<endl;
-            cout << "Error number " << (int) errno << endl;
-            exit(0);
-        }
-        //cout << "Server connected!" << endl;
-        
-        //input
-        cout<<"Input a String (or Control+D to shut off the connection)! "<<endl;
-        
     }
     close(network_socket);
     cout<<"You shut off the connection!";

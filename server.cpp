@@ -15,54 +15,21 @@
 
 using namespace std;
 
-//define不用加分号
+//define
 #define str_size 10
 
 //readline 
-/*
-int readline_v1(int socket, char* pRead)
-{
-    char c = '0';
-    int status = 0;
-    int i = 0;
-
-    while(true)
-    {
-        status = read(socket, &c, 1);
-
-        if(status < 0){
-            if(errno == EINTR){
-                continue;
-            }
-                //socket error
-                return -1;
-        }
-        else if(status == 0)
-        {
-            //EOF and return;
-            return -1;
-        }
-        else if(status > 0)
-        {
-            pRead[i] = c;
-
-            i++;
-
-            if(c == '\n' || c == '\r\n')
-            {
-                break;
-            }
-        }
-    }
-    return i;
-}
-*/
 int readline(int socket, char* buf, int n){
     char str[str_size + 1];
     int len;
     int bytesRead;
     char *b;
     char c;
+    
+    if (n <= 0 || buf == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
     
     b = buf;
     len = 0;
@@ -98,6 +65,26 @@ int readline(int socket, char* buf, int n){
     return len;
 }
 
+//Writen function goes here.
+int writen(int socket_fd, char* buf, int N){
+    int num_left=N;
+    int num_written;
+    char* ptr=buf;
+    while(num_left>0){
+        num_written=write(socket_fd,ptr,num_left);
+        if(num_written<=0){
+            if(num_written<0&&errno==EINTR){
+                num_written=0;
+            }
+            else{
+                return -1;
+            }
+        }
+        num_left-=num_written;
+        ptr+=num_written;
+    }
+    return N;
+}
 
 //child process
 void doprocess(int socket){
@@ -107,8 +94,6 @@ void doprocess(int socket){
     //cout << "One client has connected to server." << endl;
     
     //Receive from and send message back to client 
-    //len = recv(socket, str, str_size, 0);
-    //len = read(socket, str, str_size);
     len = readline(socket, str, str_size);
     if(len < 0){
         cout << "Unable to receive message from client..." << endl;
@@ -120,7 +105,7 @@ void doprocess(int socket){
         cout << "Message from client: " << str << endl;
     }
     // send(socket, str, len, 0);
-    write(socket, str, len);
+    writen(socket, str, len);
     if(len < 0){
         cout << "Unable to send message to client..." << endl;
         _exit(1);
@@ -203,23 +188,5 @@ int main(){
 
 
 
-// int length = recv(client_socket, received_str, str_size, 0);
-// if(length > 0){
-//     cout << "Message from client: " << received_str << endl;
-// }
-// //send the message back to client
-// if(length == 0){
-//     cout << "The connection has been shut off." << endl;
-//     break;
-// }
-        
-// send(client_socket, received_str, length, 0);
-// memset(received_str, 0, str_size);
 
 
-
-
-
-//Close the sockets.
-//close(server_socket);
-//close(client_socket);
