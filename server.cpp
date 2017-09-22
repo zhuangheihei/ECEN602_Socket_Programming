@@ -19,6 +19,7 @@ using namespace std;
 #define str_size 10
 
 //readline 
+/*
 int readline_v1(int socket, char* pRead)
 {
     char c = '0';
@@ -55,7 +56,7 @@ int readline_v1(int socket, char* pRead)
     }
     return i;
 }
-
+*/
 int readline(int socket, char* buf, int n){
     char str[str_size + 1];
     int len;
@@ -78,10 +79,10 @@ int readline(int socket, char* buf, int n){
         }else if(bytesRead == 0){
             if (len == 0)           // No bytes read, return 0 
                 return 0;
-            else                        //Some bytes read, end with '\0'
+            else                    //Some bytes read, end with '\0'
                 break;
 
-        } else {                        // bytesRead must be 1  
+        } else {                    // bytesRead must be 1  
             if (len < n - 1) {      // Discard > (n - 1) bytes 
                 len++;
                 *b = c;
@@ -103,7 +104,6 @@ void doprocess(int socket){
     int len;
     char str[str_size + 1], str_display[str_size + 1];
     memset(str, 0, str_size);
-    
     //cout << "One client has connected to server." << endl;
     
     //Receive from and send message back to client 

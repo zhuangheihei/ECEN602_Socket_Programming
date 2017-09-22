@@ -105,6 +105,12 @@ int main(){
         
         // call send() to send data to server;
         // int send_success=send(network_socket, bufSend, sizeof(bufSend), 0);
+        bufSend[str_size] = '\0';
+        if(strlen(bufSend) == sizeof(bufSend)-1 && bufSend[str_size-1] != '\n') {
+            printf("Input size exceed the maximum acceptable size, will quit. \n");
+            break;
+        }
+        
         int write_success=writen(network_socket,bufSend,sizeof(bufSend));
         
         if(write_success<0){
